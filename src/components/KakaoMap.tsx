@@ -33,8 +33,9 @@ export default function KakaoMap({
   const markersRef = useRef<kakao.maps.Marker[]>([]);
   const polygonsRef = useRef<kakao.maps.Polygon[]>([]);
   const clustererRef = useRef<any>(null);
-  const wmsOverlayRef = useRef<any>(null);
+  const wmsOverlayRef = useRef<HTMLDivElement | null>(null);
   const [wmsUrl, setWmsUrl] = useState<string>('');
+  const [showWms, setShowWms] = useState(false);
 
   useEffect(() => {
     console.log('KakaoMap 컴포넌트 마운트됨');
@@ -470,13 +471,13 @@ export default function KakaoMap({
   // WMS URL 생성 및 업데이트
   useEffect(() => {
     if (!map || dataSource === 'json' || selectedYears.length === 0) {
-      // WMS 사용하지 않거나 연도 선택 안 됨
-      if (wmsOverlayRef.current) {
-        wmsOverlayRef.current.setMap(null);
-        wmsOverlayRef.current = null;
-      }
+      // WMS 사용하지 않음
+      setShowWms(false);
+      setWmsUrl('');
       return;
     }
+
+    setShowWms(true);
 
     const updateWMSLayer = () => {
       const bounds = (map as any).getBounds();
@@ -486,28 +487,56 @@ export default function KakaoMap({
       const bbox = `${sw.getLng()},${sw.getLat()},${ne.getLng()},${ne.getLat()}`;
       const apiKey = process.env.NEXT_PUBLIC_KOROAD_API_KEY;
       
-      // 선택된 모든 연도에 대해 WMS 요청 (첫 번째 연도 사용)
-      const searchYearCd = selectedYears[0];
+      // searchYearCd는 accident_id 값을 그대로 사용
+      // 연도별 대표 accident_id 매핑 (하드코딩)
+      const YEAR_TO_ACCIDENT_ID: Record<number, number> = {
+        2012: 2013098,
+        2013: 2014105,
+        2014: 2015048,
+        2015: 2016146,
+        2016: 2017029,
+        2017: 2018029,
+        2018: 2019036,
+        2019: 2020027,
+        2020: 2021024,
+        2021: 2022042,
+        2022: 2023057,
+        2023: 2024044,
+        2024: 2025076
+      };
       
-      const wmsParams = new URLSearchParams({
-        authKey: apiKey || '',
-        layers: 'freoldman',
-        format: 'image/png',
-        transparent: 'TRUE',
-        service: 'WMS',
-        version: '1.1.1',
-        request: 'GetMap',
-        srs: 'EPSG:4326',
-        bbox: bbox,
-        width: '512',
-        height: '469',
-        searchYearCd: String(searchYearCd)
-      });
-
-      const url = `https://opendata.koroad.or.kr/data/wms/frequentzone/oldman?${wmsParams.toString()}`;
+      const selectedYear = selectedYears[0];
+      const searchYearCd = YEAR_TO_ACCIDENT_ID[selectedYear];
       
-      console.log('WMS URL 생성:', url);
-      setWmsUrl(url);
+      if (!searchYearCd) {
+        console.warn('⚠️ 지원하지 않는 연도입니다:', selectedYear);
+        return;
+      }
+      
+      // WMS 요청 URL 구성 (시도/구군 없이 전국)
+      // API 키는 이미 URL 인코딩되어 있으므로 그대로 사용
+      const wmsUrl = 
+        `https://opendata.koroad.or.kr/data/wms/frequentzone/oldman?` +
+        `authKey=${apiKey}` +
+        `&layers=freoldman` +
+        `&format=image/png` +
+        `&transparent=TRUE` +
+        `&service=WMS` +
+        `&version=1.1.1` +
+        `&request=GetMap` +
+        `&bbox=${bbox}` +
+        `&width=1024` +
+        `&height=1024` +
+        `&srs=EPSG:4326` +
+        `&searchYearCd=${searchYearCd}`;
+      
+      console.log('🗺️ WMS URL 생성:');
+      console.log('   ', wmsUrl);
+      console.log('  - bbox:', bbox);
+      console.log('  - 선택 연도:', selectedYear);
+      console.log('  - searchYearCd (accident_id):', searchYearCd);
+      console.log('  - API Key (앞 20자):', apiKey?.substring(0, 20) + '...');
+      setWmsUrl(wmsUrl);
     };
 
     // 초기 로드
@@ -528,43 +557,64 @@ export default function KakaoMap({
     };
   }, [map, dataSource, selectedYears]);
 
-  // WMS 오버레이 렌더링
-  useEffect(() => {
-    if (!map || !wmsUrl || dataSource === 'json') {
-      return;
-    }
-
-    // 기존 오버레이 제거
-    if (wmsOverlayRef.current) {
-      wmsOverlayRef.current.setMap(null);
-    }
-
-    const bounds = (map as any).getBounds();
-    
-    // CustomOverlay 생성
-    const content = `<img src="${wmsUrl}" style="width:100%;height:100%;opacity:0.7;pointer-events:none;" />`;
-    
-    const overlay = new (window.kakao.maps as any).CustomOverlay({
-      map: map,
-      content: content,
-      position: map.getCenter(),
-      xAnchor: 0.5,
-      yAnchor: 0.5,
-      zIndex: 1
-    });
-
-    wmsOverlayRef.current = overlay;
-    
-    console.log('WMS 오버레이 생성됨');
-
-  }, [map, wmsUrl, dataSource]);
-
   return (
-    <div className={className}>
+    <div className={className} style={{ position: 'relative' }}>
       <div 
         ref={mapRef} 
         className="w-full h-full"
       />
+      {showWms && wmsUrl && (
+        <div 
+          ref={wmsOverlayRef}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none',
+            zIndex: 1
+          }}
+        >
+          <img 
+            src={wmsUrl} 
+            alt="WMS Layer"
+            style={{
+              width: '100%',
+              height: '100%',
+              opacity: 0.7,
+              objectFit: 'cover'
+            }}
+            onLoad={(e) => {
+              console.log('✅ WMS 이미지 로드 완료!');
+              console.log('   URL:', wmsUrl);
+              console.log('   크기:', (e.target as HTMLImageElement).naturalWidth, 'x', (e.target as HTMLImageElement).naturalHeight);
+            }}
+            onError={(e) => {
+              console.error('❌ WMS 이미지 로드 실패');
+              console.error('   URL:', wmsUrl);
+              console.error('   Target:', e.target);
+              console.error('   현재 이미지:', (e.target as HTMLImageElement).src);
+              console.log('\n🔗 이 URL을 복사해서 새 탭에서 열어보세요:');
+              console.log(wmsUrl);
+              
+              // URL을 직접 fetch로 테스트
+              fetch(wmsUrl)
+                .then(res => {
+                  console.log('Fetch 응답:', res.status, res.statusText);
+                  console.log('Content-Type:', res.headers.get('content-type'));
+                  return res.text();
+                })
+                .then(text => {
+                  console.log('응답 내용 (처음 500자):', text.substring(0, 500));
+                })
+                .catch(err => {
+                  console.error('Fetch 에러:', err);
+                });
+            }}
+          />
+        </div>
+      )}
       {!isLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
           <div className="text-center">
