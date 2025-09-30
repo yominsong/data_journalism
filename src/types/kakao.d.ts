@@ -5,8 +5,17 @@ declare namespace kakao.maps {
     setLevel(level: number): void;
     getCenter(): LatLng;
     getLevel(): number;
+    getBounds(): LatLngBounds;
     setMapTypeId(mapTypeId: string): void;
     setMapStyle(style: any[]): void;
+  }
+
+  class LatLngBounds {
+    constructor();
+    extend(latlng: LatLng): void;
+    getSouthWest(): LatLng;
+    getNorthEast(): LatLng;
+    getCenter(): LatLng;
   }
 
   interface MapOptions {
@@ -63,6 +72,21 @@ declare namespace kakao.maps {
   interface InfoWindowOptions {
     content?: string;
     removable?: boolean;
+  }
+
+  class CustomOverlay {
+    constructor(options: CustomOverlayOptions);
+    setMap(map: Map | null): void;
+    getMap(): Map;
+  }
+
+  interface CustomOverlayOptions {
+    map?: Map;
+    content: string | HTMLElement;
+    position: LatLng;
+    xAnchor?: number;
+    yAnchor?: number;
+    zIndex?: number;
   }
 
   class Polygon {

@@ -8,18 +8,24 @@ interface MarkerData {
   [key: string]: any;
 }
 
+type DataSource = 'json' | 'wms' | 'both';
+
 interface KakaoMapProps {
   center?: { lat: number; lng: number };
   level?: number;
   className?: string;
   markers?: MarkerData[];
+  dataSource?: DataSource;
+  selectedYears?: number[];
 }
 
 export default function KakaoMap({ 
   center = { lat: 36.5, lng: 127.5 }, // 대한민국 지리적 중심점
   level = 12, // 32km 축적에 해당하는 줌 레벨
   className = "w-full h-full",
-  markers = []
+  markers = [],
+  dataSource = 'json',
+  selectedYears = [2024]
 }: KakaoMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<kakao.maps.Map | null>(null);
@@ -27,6 +33,8 @@ export default function KakaoMap({
   const markersRef = useRef<kakao.maps.Marker[]>([]);
   const polygonsRef = useRef<kakao.maps.Polygon[]>([]);
   const clustererRef = useRef<any>(null);
+  const wmsOverlayRef = useRef<any>(null);
+  const [wmsUrl, setWmsUrl] = useState<string>('');
 
   useEffect(() => {
     console.log('KakaoMap 컴포넌트 마운트됨');
@@ -139,9 +147,13 @@ export default function KakaoMap({
     polygonsRef.current.forEach(polygon => polygon.setMap(null));
     polygonsRef.current = [];
 
-    // markers가 비어있으면 정리만 하고 종료
-    if (!markers.length) {
-      console.log('마커가 없습니다. 지도를 비웁니다.');
+    // WMS만 사용하거나 markers가 비어있으면 정리만 하고 종료
+    if (dataSource === 'wms' || !markers.length) {
+      if (dataSource === 'wms') {
+        console.log('WMS 모드: JSON 마커 숨김');
+      } else {
+        console.log('마커가 없습니다. 지도를 비웁니다.');
+      }
       return;
     }
 
@@ -445,7 +457,99 @@ export default function KakaoMap({
     console.log(`  - 의료기관: ${medicalCount}개 (개별 표시)`);
     console.log(`  - 전통시장: ${marketCount}개 (개별 표시)`);
     console.log(`  - 사회복지관: ${welfareCount}개 (개별 표시)`);
-  }, [map, markers]);
+  }, [map, markers, dataSource]);
+
+  // WMS URL 생성 및 업데이트
+  useEffect(() => {
+    if (!map || dataSource === 'json' || selectedYears.length === 0) {
+      // WMS 사용하지 않거나 연도 선택 안 됨
+      if (wmsOverlayRef.current) {
+        wmsOverlayRef.current.setMap(null);
+        wmsOverlayRef.current = null;
+      }
+      return;
+    }
+
+    const updateWMSLayer = () => {
+      const bounds = (map as any).getBounds();
+      const sw = bounds.getSouthWest();
+      const ne = bounds.getNorthEast();
+      
+      const bbox = `${sw.getLng()},${sw.getLat()},${ne.getLng()},${ne.getLat()}`;
+      const apiKey = process.env.NEXT_PUBLIC_KOROAD_API_KEY;
+      
+      // 선택된 모든 연도에 대해 WMS 요청 (첫 번째 연도 사용)
+      const searchYearCd = selectedYears[0];
+      
+      const wmsParams = new URLSearchParams({
+        authKey: apiKey || '',
+        layers: 'freoldman',
+        format: 'image/png',
+        transparent: 'TRUE',
+        service: 'WMS',
+        version: '1.1.1',
+        request: 'GetMap',
+        srs: 'EPSG:4326',
+        bbox: bbox,
+        width: '512',
+        height: '469',
+        searchYearCd: String(searchYearCd)
+      });
+
+      const url = `https://opendata.koroad.or.kr/data/wms/frequentzone/oldman?${wmsParams.toString()}`;
+      
+      console.log('WMS URL 생성:', url);
+      setWmsUrl(url);
+    };
+
+    // 초기 로드
+    updateWMSLayer();
+
+    // 지도 이동/줌 이벤트 리스너
+    const idleListener = () => updateWMSLayer();
+    const zoomChangedListener = () => updateWMSLayer();
+    
+    ((window.kakao.maps as any).event as any).addListener(map, 'idle', idleListener);
+    ((window.kakao.maps as any).event as any).addListener(map, 'zoom_changed', zoomChangedListener);
+    ((window.kakao.maps as any).event as any).addListener(map, 'dragend', idleListener);
+
+    return () => {
+      ((window.kakao.maps as any).event as any).removeListener(map, 'idle', idleListener);
+      ((window.kakao.maps as any).event as any).removeListener(map, 'zoom_changed', zoomChangedListener);
+      ((window.kakao.maps as any).event as any).removeListener(map, 'dragend', idleListener);
+    };
+  }, [map, dataSource, selectedYears]);
+
+  // WMS 오버레이 렌더링
+  useEffect(() => {
+    if (!map || !wmsUrl || dataSource === 'json') {
+      return;
+    }
+
+    // 기존 오버레이 제거
+    if (wmsOverlayRef.current) {
+      wmsOverlayRef.current.setMap(null);
+    }
+
+    const bounds = (map as any).getBounds();
+    
+    // CustomOverlay 생성
+    const content = `<img src="${wmsUrl}" style="width:100%;height:100%;opacity:0.7;pointer-events:none;" />`;
+    
+    const overlay = new (window.kakao.maps as any).CustomOverlay({
+      map: map,
+      content: content,
+      position: map.getCenter(),
+      xAnchor: 0.5,
+      yAnchor: 0.5,
+      zIndex: 1
+    });
+
+    wmsOverlayRef.current = overlay;
+    
+    console.log('WMS 오버레이 생성됨');
+
+  }, [map, wmsUrl, dataSource]);
 
   return (
     <div className={className}>

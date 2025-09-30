@@ -2,11 +2,14 @@
 
 import { useState } from 'react';
 
+export type DataSource = 'json' | 'wms' | 'both';
+
 export interface FilterState {
   selectedYears: number[];
   showMedical: boolean;
   showMarket: boolean;
   showWelfare: boolean;
+  dataSource: DataSource;
 }
 
 interface DataFilterProps {
@@ -105,6 +108,58 @@ export default function DataFilter({ filterState, onFilterChange }: DataFilterPr
               <p className="text-xs text-gray-500">
                 {filterState.selectedYears.length}개 연도 선택됨
               </p>
+            </div>
+          </div>
+
+          {/* 데이터 소스 선택 */}
+          <div className="pt-4 border-t border-gray-200">
+            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <span className="text-blue-600">📊</span>
+              사고다발지역 데이터 소스
+            </h3>
+            
+            <div className="space-y-2">
+              <label className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <input
+                  type="radio"
+                  name="dataSource"
+                  checked={filterState.dataSource === 'json'}
+                  onChange={() => onFilterChange({ ...filterState, dataSource: 'json' })}
+                  className="w-4 h-4 text-blue-600"
+                />
+                <div className="flex items-center gap-2 flex-1">
+                  <span className="font-medium text-gray-700">JSON 데이터</span>
+                  <span className="text-xs text-gray-500">(마커 + 폴리곤)</span>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <input
+                  type="radio"
+                  name="dataSource"
+                  checked={filterState.dataSource === 'wms'}
+                  onChange={() => onFilterChange({ ...filterState, dataSource: 'wms' })}
+                  className="w-4 h-4 text-blue-600"
+                />
+                <div className="flex items-center gap-2 flex-1">
+                  <span className="font-medium text-gray-700">WMS 레이어</span>
+                  <span className="text-xs text-gray-500">(실시간 이미지)</span>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <input
+                  type="radio"
+                  name="dataSource"
+                  checked={filterState.dataSource === 'both'}
+                  onChange={() => onFilterChange({ ...filterState, dataSource: 'both' })}
+                  className="w-4 h-4 text-blue-600"
+                />
+                <div className="flex items-center gap-2 flex-1">
+                  <span className="font-medium text-gray-700">모두 표시</span>
+                  <span className="text-xs text-gray-500">(JSON + WMS)</span>
+                </div>
+              </label>
             </div>
           </div>
 

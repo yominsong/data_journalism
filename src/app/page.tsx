@@ -10,7 +10,8 @@ export default function Home() {
     selectedYears: [2024], // 최신 연도만 기본 선택
     showMedical: true,     // 의료기관 표시
     showMarket: true,      // 전통시장 표시
-    showWelfare: true      // 사회복지관 표시
+    showWelfare: true,     // 사회복지관 표시
+    dataSource: 'json'     // 기본값: JSON 데이터
   });
   const [loading, setLoading] = useState(true);
 
@@ -125,6 +126,8 @@ export default function Home() {
             level={12}
             className="w-full h-full"
             markers={filteredMarkers}
+            dataSource={filterState.dataSource}
+            selectedYears={filterState.selectedYears}
           />
           <DataFilter 
             filterState={filterState}
