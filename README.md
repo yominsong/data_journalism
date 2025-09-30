@@ -1,71 +1,117 @@
-# 데이터 저널리즘 프로젝트
+# Data Journalism Project
 
-카카오 맵을 활용한 데이터 시각화 프로젝트입니다.
+A data visualization project utilizing Kakao Maps to display elderly accident hotspots, medical institutions, traditional markets, and welfare centers across South Korea.
 
-## 기술 스택
+## Tech Stack
 
-- **언어**: TypeScript
-- **프레임워크**: React + Next.js
-- **백엔드**: Supabase + PostGIS
-- **상태 관리**: Zustand + TanStack Query
-- **스타일링**: vanilla-extract
-- **인터랙션**: Framer Motion
-- **패키지 매니저**: pnpm
-- **지도**: Kakao Map
-- **배포**: Vercel
-- **품질**: ESLint
+- **Language**: TypeScript
+- **Framework**: React + Next.js 15.5.4
+- **Package Manager**: pnpm
+- **Map**: Kakao Map API
+- **Styling**: Tailwind CSS
+- **Deployment**: Vercel
+- **Quality**: ESLint
 
-## 시작하기
+## Features
 
-### 1. 의존성 설치
+- 🗺️ **Full-screen Interactive Map** with grayscale styling
+- 📍 **4 Data Types with Custom Icons**:
+  - 🔵 Elderly accident hotspots (blue markers with clustering)
+  - 🏥 Medical institutions (red cross icon)
+  - 🛒 Traditional markets (orange shopping cart icon)
+  - 👥 Welfare centers (green people icon)
+- 🎯 **Advanced Filtering System**:
+  - Year filter for accident data (2012-2024)
+  - Facility type toggles
+- 💬 **Interactive InfoWindows** on marker/polygon clicks
+- 🎨 **Color-coded Overlays** (polygons, markers, clusters)
+- 📱 **Responsive Design**
+
+## Getting Started
+
+### 1. Install Dependencies
 
 ```bash
 pnpm install
 ```
 
-### 2. 환경 변수 설정
+### 2. Environment Variables
 
-`.env.local` 파일을 생성하고 카카오 맵 API 키를 설정하세요:
+Create a `.env.local` file and add your Kakao Map API key:
 
 ```bash
 NEXT_PUBLIC_KAKAO_MAP_API_KEY=your_kakao_map_api_key_here
 ```
 
-카카오 맵 API 키는 [카카오 개발자 콘솔](https://developers.kakao.com/)에서 발급받을 수 있습니다.
+Get your API key from [Kakao Developers Console](https://developers.kakao.com/).
 
-### 3. 개발 서버 실행
+### 3. Run Development Server
 
 ```bash
 pnpm dev
 ```
 
-브라우저에서 [http://localhost:3000](http://localhost:3000)을 열어 결과를 확인하세요.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## 프로젝트 구조
+## Project Structure
 
 ```
 src/
-├── app/                 # Next.js App Router
-│   └── page.tsx        # 메인 페이지
-├── components/         # React 컴포넌트
-│   └── KakaoMap.tsx   # 카카오 맵 컴포넌트
-└── types/             # TypeScript 타입 정의
-    └── kakao.d.ts     # 카카오 맵 API 타입
+├── app/
+│   ├── page.tsx              # Main page with filter logic
+│   └── globals.css           # Global styles
+├── components/
+│   ├── KakaoMap.tsx          # Kakao Map component
+│   ├── DataFilter.tsx        # Unified filter component
+│   └── YearFilter.tsx        # Legacy year filter
+├── types/
+│   ├── kakao.d.ts            # Kakao Maps API type definitions
+│   └── data.ts               # Data type definitions
+├── data/                     # Local JSON data files
+└── public/
+    └── data/                 # Public JSON data files
 ```
 
-## 주요 기능
+## Data Sources
 
-- ✅ 카카오 맵 기본 설정
-- ✅ 반응형 디자인
-- ✅ TypeScript 타입 안전성
-- 🔄 Supabase + PostGIS 연동 예정
-- 🔄 데이터 시각화 컴포넌트 예정
-- 🔄 인터랙티브 애니메이션 예정
+- **Elderly Accident Hotspots**: ~4,000 locations with polygon boundaries
+- **Medical Institutions**: ~2,500 hospitals and clinics
+- **Traditional Markets**: ~1,500 markets
+- **Welfare Centers**: ~469 community centers
 
-## 다음 단계
+## Key Implementation Details
 
-1. Supabase 프로젝트 설정
-2. PostGIS 확장 활성화
-3. Zustand + TanStack Query 설정
-4. Framer Motion 애니메이션 추가
-5. 데이터 시각화 컴포넌트 개발
+### Map Styling
+- Base map tiles are rendered in grayscale
+- Overlays (markers, polygons, clusters) remain in full color
+- Custom SVG markers for each facility type
+
+### Clustering
+- Applied only to elderly accident hotspots
+- Other facilities display as individual markers
+- Dynamic cluster styling based on zoom level
+
+### Filtering Logic
+- Year filter affects only accident hotspots
+- Facility toggles show/hide specific types
+- Real-time updates with React useMemo
+
+## Development
+
+```bash
+# Install dependencies
+pnpm install
+
+# Run development server
+pnpm dev
+
+# Build for production
+pnpm build
+
+# Start production server
+pnpm start
+```
+
+## License
+
+This project is for educational and journalistic purposes.
