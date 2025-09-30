@@ -147,13 +147,9 @@ export default function KakaoMap({
     polygonsRef.current.forEach(polygon => polygon.setMap(null));
     polygonsRef.current = [];
 
-    // WMS만 사용하거나 markers가 비어있으면 정리만 하고 종료
-    if (dataSource === 'wms' || !markers.length) {
-      if (dataSource === 'wms') {
-        console.log('WMS 모드: JSON 마커 숨김');
-      } else {
-        console.log('마커가 없습니다. 지도를 비웁니다.');
-      }
+    // markers가 비어있으면 정리만 하고 종료
+    if (!markers.length) {
+      console.log('마커가 없습니다. 지도를 비웁니다.');
       return;
     }
 
@@ -292,6 +288,11 @@ export default function KakaoMap({
     // 새 마커 및 폴리곤 추가
     markers.forEach(data => {
       const colors = getColorByType(data.dataType);
+      
+      // WMS 모드에서는 사고다발지역(elderly)만 스킵
+      if (dataSource === 'wms' && data.dataType === 'elderly') {
+        return; // 사고다발지역은 WMS로 표시
+      }
       
       // 폴리곤이 있으면 그리기
       if (data.polygon && data.polygon.coordinates && data.polygon.coordinates.length > 0) {
@@ -436,11 +437,13 @@ export default function KakaoMap({
       markersRef.current.push(marker);
     });
 
-    // 사고다발지역 마커만 클러스터러에 추가
-    const elderlyMarkers = markersRef.current.filter((_, index) => markers[index]?.dataType === 'elderly');
-    if (clustererRef.current && elderlyMarkers.length > 0) {
-      clustererRef.current.addMarkers(elderlyMarkers);
-      console.log(`${elderlyMarkers.length}개의 사고다발지역 마커에 클러스터링 적용`);
+    // 사고다발지역 마커만 클러스터러에 추가 (WMS 모드가 아닐 때만)
+    if (dataSource !== 'wms') {
+      const elderlyMarkers = markersRef.current.filter((_, index) => markers[index]?.dataType === 'elderly');
+      if (clustererRef.current && elderlyMarkers.length > 0) {
+        clustererRef.current.addMarkers(elderlyMarkers);
+        console.log(`${elderlyMarkers.length}개의 사고다발지역 마커에 클러스터링 적용`);
+      }
     }
 
     // 마커 렌더링 후 그레이스케일 제거
@@ -452,8 +455,13 @@ export default function KakaoMap({
     const marketCount = markers.filter(m => m.dataType === 'market').length;
     const welfareCount = markers.filter(m => m.dataType === 'welfare').length;
     
-    console.log(`총 ${markers.length}개 마커 표시됨:`);
-    console.log(`  - 사고다발지역: ${elderlyCount}개 (클러스터링 적용)`);
+    console.log(`=== 마커 렌더링 (dataSource: ${dataSource}) ===`);
+    console.log(`총 ${markers.length}개 데이터:`);
+    if (dataSource === 'wms') {
+      console.log(`  - 사고다발지역: ${elderlyCount}개 (WMS로 표시)`);
+    } else {
+      console.log(`  - 사고다발지역: ${elderlyCount}개 (JSON 클러스터링)`);
+    }
     console.log(`  - 의료기관: ${medicalCount}개 (개별 표시)`);
     console.log(`  - 전통시장: ${marketCount}개 (개별 표시)`);
     console.log(`  - 사회복지관: ${welfareCount}개 (개별 표시)`);
